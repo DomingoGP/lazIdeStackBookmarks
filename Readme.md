@@ -1,5 +1,5 @@
 
-#Stack based bookmarks for the Lazarus IDE.
+# Stack based bookmarks for the Lazarus IDE.
 
 This add-on adds a menu entry in the view main menu and other in the search main menu.
 
@@ -20,7 +20,7 @@ For example
 
 **WARNING:  in beta state if occurs any error I recommend to erase the ProjectFileName.bkm file**
 
-##Features.
+## Features.
 
 Unlimited numbers of bookmarks.
 
@@ -62,7 +62,7 @@ The bookmarks are saved per project in file ProjectName.bkm  ( if you use GIT fo
 Undo is not supported. If you delete or move a line with a bookmark and then Undo the changes the bookmark will remain in its new position.
 
 
-#Screenshots
+# Screenshots
 
 ![screenshoot](https://user-images.githubusercontent.com/49276674/183255985-47353ea7-2998-4374-9e27-81e8cadbfca3.png)
 
