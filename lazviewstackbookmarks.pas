@@ -1255,7 +1255,7 @@ var
   wBDSource: PStackBookmark;
   wIndexSource, wIndexTarget, wItemIndex: integer;
 begin
-  wSource := TVirtualStringTree(Source).FocusedNode;
+  wSource := TLazVirtualStringTree(Source).FocusedNode;
   wTarget := Sender.DropTargetNode;
   wIndexSource := wSource^.Index;
   if wTarget <> nil then
@@ -1267,7 +1267,7 @@ begin
     dmNowhere:
     begin
       wAttMode := amInsertAfter; //amNoWhere;
-      wTarget := TVirtualStringTree(Source).GetLast();
+      wTarget := TLazVirtualStringTree(Source).GetLast();
       Inc(wIndexTarget);
     end;
     dmAbove: wAttMode := amInsertBefore;
