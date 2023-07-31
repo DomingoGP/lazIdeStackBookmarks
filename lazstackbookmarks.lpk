@@ -18,7 +18,7 @@ Descriptive bookmarks.
 Quickly drop (**Push**) a stack-based bookmark, move anywhere, then simply **Pop** the bookmark to go back.
 Easy to navigate between bookmarks."/>
     <License Value="Modified LGLP"/>
-    <Version Minor="2"/>
+    <Version Minor="3"/>
     <Files Count="1">
       <Item1>
         <Filename Value="lazviewstackbookmarks.pas"/>

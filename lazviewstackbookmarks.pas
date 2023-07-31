@@ -211,6 +211,7 @@ type
 
   TCaptureIdeEvents = class
   private
+    FEnabled: boolean;
     procedure DoFirst(Sender:TObject);
     procedure DoFirstCurrent(Sender:TObject);
     procedure DoLast(Sender:TObject);
@@ -231,6 +232,7 @@ type
     procedure OnLineCountChanged(Sender: TSynEditStrings; aIndex, aCount: integer);
     function OnProjectClose(Sender: TObject;AProject: TLazProject): TModalResult;
     function OnProjectOpened(Sender: TObject;AProject: TLazProject): TModalResult;
+    procedure OnIdeClose(Sender: TObject);
   end;
 
 
@@ -308,6 +310,8 @@ var
 begin
   if frmViewStackBM <> nil then
     frmViewStackBM.BookmarksTree.Clear;
+  if gBookmarks=nil then
+    Exit;
   wI:=gBookmarks.Count-1;
   while wI>=0 do
   begin
@@ -382,13 +386,20 @@ end;
 
 procedure DoChangeActiveEditor(aNewEditor: TSynEdit; const aFileName: string;const aUnitName:string);
 begin
+  if gCaptureIdeEventsObject=nil then
+    Exit;
   gCaptureIdeEventsObject.EditorRemoveChangeHandler;
-  gBookmarksCurrentEditor := aNewEditor;
-  gBookmarksCurrentEditorFilename := GetNormalizedFileName(gBookMarksProjectFolder,aFileName,gBookmarksCurrentEditorFilenameIsRelative);
-  gBookmarksCurrentEditorUnitname := aUnitName;
-  gBookmarksCurrentEditorFilenameHash := HashString(gBookmarksCurrentEditorFilename);
-  gBookmarksInCurrentEditorCount:=CountBookmarksInCurrentEditor;
-  gCaptureIdeEventsObject.EditorAddChangeHandler;
+  if gCaptureIdeEventsObject.FEnabled then
+  begin
+    gBookmarksCurrentEditor := aNewEditor;
+    gBookmarksCurrentEditorFilename := GetNormalizedFileName(gBookMarksProjectFolder,aFileName,gBookmarksCurrentEditorFilenameIsRelative);
+    gBookmarksCurrentEditorUnitname := aUnitName;
+    gBookmarksCurrentEditorFilenameHash := HashString(gBookmarksCurrentEditorFilename);
+    gBookmarksInCurrentEditorCount:=CountBookmarksInCurrentEditor;
+    gCaptureIdeEventsObject.EditorAddChangeHandler;
+  end
+  else
+    gBookmarksCurrentEditor := nil;
   if frmViewStackBM<>nil then
     frmViewStackBM.BookmarksTree.Invalidate;
 end;
@@ -444,10 +455,8 @@ begin
   if (wSourceEditor <> nil) and (wSourceEditor.EditorControl is TSynEdit) then
   begin
     wSynEdit := TSynEdit(wSourceEditor.EditorControl);
-    //if wSynEdit<>gBookmarksCurrentEditor then
-    //begin
+    if wSynEdit<>gBookmarksCurrentEditor then
       DoChangeActiveEditor(wSynEdit,wSourceEditor.Filename,wSourceEditor.PageName);
-    //end;
   end;
 end;
 
@@ -533,6 +542,8 @@ var
   wI, wAdd: integer;
   wBD: TStackBookmark;
 begin
+  if gCaptureIdeEventsObject=nil then
+    Exit;
   if (aCount = 0) or (gBookmarksInCurrentEditorCount <= 0) or (gBookmarks.Count <= 0) then
     Exit;
   wI:=0;
@@ -1155,7 +1166,9 @@ end;
 
 procedure TLazViewStackBookmarks.FormClose(Sender: TObject; var CloseAction: TCloseAction);
 begin
-  ClearBookmarksNodePointers;
+  if gBookmarksCurrentEditor <> nil then
+    ClearBookmarksNodePointers;
+  BookmarksTree.Clear;
   CloseAction := caFree;
   frmViewStackBM := nil;
 end;
@@ -1541,14 +1554,22 @@ var
 begin
   if gBookmarksCurrentEditor = nil then
     Exit;
-  wSV := TSynEditHack(gBookmarksCurrentEditor).GetViewedTextBuffer;
-  //if gBookmarksCurrentEditor.TextViewsManager=nil then
-  //  Exit;
-  //if gBookmarksCurrentEditor.TextViewsManager.Count<=0 then
-  //  Exit;
-  //wSV:=gBookmarksCurrentEditor.TextViewsManager.SynTextView[0];
-  if wSV<>nil then
-    wSV.AddChangeHandler(senrLineCount, @OnLineCountChanged);
+  if not FEnabled then
+    Exit;
+  if gBookmarksCurrentEditor = nil then
+    Exit;
+  try
+    wSV := TSynEditHack(gBookmarksCurrentEditor).GetViewedTextBuffer;
+    //if gBookmarksCurrentEditor.TextViewsManager=nil then
+    //  Exit;
+    //if gBookmarksCurrentEditor.TextViewsManager.Count<=0 then
+    //  Exit;
+    //wSV:=gBookmarksCurrentEditor.TextViewsManager.SynTextView[0];
+    if wSV <> nil then
+      wSV.AddChangeHandler(senrLineCount, @OnLineCountChanged);
+  except
+
+  end;
 end;
 
 procedure TCaptureIdeEvents.EditorRemoveChangeHandler;
@@ -1557,25 +1578,35 @@ var
 begin
   if gBookmarksCurrentEditor = nil then
     Exit;
-  wSV := TSynEditHack(gBookmarksCurrentEditor).GetViewedTextBuffer;
-  //if gBookmarksCurrentEditor.TextViewsManager=nil then
-  //  Exit;
-  //if gBookmarksCurrentEditor.TextViewsManager.Count<=0 then
-  //  Exit;
-  //wSV:=gBookmarksCurrentEditor.TextViewsManager.SynTextView[0];
-  if wSV<>nil then
-    wSV.RemoveChangeHandler(senrLineCount, @OnLineCountChanged);
+  try
+    wSV := TSynEditHack(gBookmarksCurrentEditor).GetViewedTextBuffer;
+    //if gBookmarksCurrentEditor.TextViewsManager=nil then
+    //  Exit;
+    //if gBookmarksCurrentEditor.TextViewsManager.Count<=0 then
+    //  Exit;
+    //wSV:=gBookmarksCurrentEditor.TextViewsManager.SynTextView[0];
+    if wSV <> nil then
+      wSV.RemoveChangeHandler(senrLineCount, @OnLineCountChanged);
+  except
+
+  end;
 end;
 
 procedure TCaptureIdeEvents.OnActiveEditorChanged(Sender:TObject);
 begin
   //ShowMessage('changed editor');
-  SetActiveEditor;
+  if gCaptureIdeEventsObject=nil then
+    Exit;
+  if FEnabled then
+    SetActiveEditor;
 end;
 
 function TCaptureIdeEvents.OnProjectOpened(Sender:TObject; AProject:TLazProject):TModalResult;
 begin
   //ShowMessage('project opened');
+  if gCaptureIdeEventsObject=nil then
+    Exit;
+  FEnabled:=True;
   gBookMarksProjectFolder:=ExtractFilePath(AProject.ProjectSessionFile);
   SetActiveEditor;
   ClearBookmarksList;
@@ -1596,6 +1627,8 @@ var
   wBD:TStackBookmark;
   wIsRelative:boolean;
 begin
+  if gCaptureIdeEventsObject=nil then
+    Exit;
   if SaveStep=sefsSavedAs then
   begin
     wOldHash:=gBookmarksCurrentEditorFilenameHash;
@@ -1631,11 +1664,32 @@ end;
 function TCaptureIdeEvents.OnProjectClose(Sender:TObject; AProject:TLazProject):TModalResult;
 begin
   //ShowMessage('project closed');
+  if gCaptureIdeEventsObject=nil then
+    Exit;
+  FEnabled:=False;
+  if gCaptureIdeEventsObject=nil then
+    Exit;
+
+  gCaptureIdeEventsObject.EditorRemoveChangeHandler;
+  gBookmarksCurrentEditor:=nil;
+
   SaveStackBookmarks(ChangeFileExt(AProject.ProjectSessionFile,'.bkm'));
   ClearBookmarksList;
-  if frmViewStackBM<>nil then
-    frmViewStackBM.FillTreeView;
   result:=mrOk;
+end;
+
+// destroy all/ suicide.
+procedure TCaptureIdeEvents.OnIdeClose(Sender: TObject);
+begin
+  if gCaptureIdeEventsObject=nil then
+    Exit;
+  //LazarusIDE.RemoveHandlerOnProjectOpened(@gCaptureIdeEventsObject.OnProjectOpened);
+  //LazarusIDE.AddHandlerOnProjectClose(@gCaptureIdeEventsObject.OnProjectClose);
+  //LazarusIDE.AddHandlerOnSaveEditorFile(@gCaptureIdeEventsObject.OnFileSaved);
+  SourceEditorManagerIntf.UnRegisterChangeEvent(semEditorActivate,@gCaptureIdeEventsObject.OnActiveEditorChanged);
+  ClearBookmarksList;
+  FreeAndNil(gBookmarks);
+  FreeAndNil(gCaptureIdeEventsObject);   // auto destruction.
 end;
 
 procedure TCaptureIdeEvents.DoPush(Sender:TObject);
@@ -1712,6 +1766,8 @@ procedure CreatelazStackBookmarks(Sender: TObject; aFormName: string; var aForm:
   DoDisableAutoSizing: boolean);
 begin
   aForm:=nil;
+  if frmViewStackBM<>nil then
+    Exit;
   // sanity check to avoid clashing with another package that has registered a window with the same name
   if CompareText(aFormName, FORM_NAME) <> 0 then
   begin
@@ -1818,6 +1874,7 @@ begin
   LazarusIDE.AddHandlerOnProjectOpened(@gCaptureIdeEventsObject.OnProjectOpened);
   LazarusIDE.AddHandlerOnProjectClose(@gCaptureIdeEventsObject.OnProjectClose);
   LazarusIDE.AddHandlerOnSaveEditorFile(@gCaptureIdeEventsObject.OnFileSaved);
+  LazarusIDE.AddHandlerOnIdeClose(@gCaptureIdeEventsObject.OnIdeClose);
 end;
 
 
@@ -1832,8 +1889,8 @@ initialization
   gBookmarksCurrentEditorUnitname := '';
   gBookMarksProjectFolder := '';
   gCaptureIdeEventsObject := TCaptureIdeEvents.Create;
-finalization
-  gCaptureIdeEventsObject.Free;
-  ClearBookmarksList;
-  gBookmarks.Free;
+//finalization
+  // We cant't depend on the finalization order of units.
+  // Leaking memory when used with DockedForms.
+  // now I free resources in the OnIdeClose event.
 end.
