@@ -30,6 +30,7 @@ type
     procedure btnChangeFilenameClick(Sender:TObject);
     procedure Button1Click(Sender:TObject);
     procedure FormClose(Sender:TObject; var CloseAction:TCloseAction);
+    procedure FormCreate(Sender: TObject);
   private
 
   public
@@ -65,8 +66,14 @@ end;
 
 procedure TForm1.FormClose(Sender:TObject; var CloseAction:TCloseAction);
 begin
-  frmViewStackBM:=nil;
   DoChangeActiveEditor(nil,'');
+  FreeBookmarks;
+  frmViewStackBM:=nil;
+end;
+
+procedure TForm1.FormCreate(Sender: TObject);
+begin
+  EnableCaptureIdeEvents(True);
 end;
 
 end.

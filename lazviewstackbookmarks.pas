@@ -127,6 +127,8 @@ procedure Register;
 {$ifdef TESTING}
 procedure DoChangeActiveEditor(aNewEditor: TSynEdit; const aFileName: string;const aUnitName:string='');
 function GetNormalizedFileName(const aBaseFolder:string;const aFileName:string;out aIsRelative:boolean):string;
+procedure EnableCaptureIdeEvents(aEnabled:boolean);
+procedure FreeBookmarks;
 {$endif}
 
 var
@@ -268,9 +270,15 @@ var
   gBookmarksCurrentEditorFilename: string;
   gBookmarksCurrentEditorFilenameIsRelative:boolean;
   gBookmarksCurrentEditorFilenameHash: uint32;
-  gBookmarksCurrentEditor: TSynEdit;
+  gBookmarksCurrentEditor: TCustomSynEdit;
   gCaptureIdeEventsObject: TCaptureIdeEvents;
   gBookMarksProjectFolder: string;     //Warning: I can't detect change on Project Save As
+
+
+  procedure EnableCaptureIdeEvents(aEnabled:boolean);
+  begin
+    gCaptureIdeEventsObject.FEnabled := aEnabled;
+  end;
 
 
   function GetNormalizedFileName(const aBaseFolder:string;const aFileName:string;out aIsRelative:boolean):string;
@@ -933,6 +941,7 @@ begin
     if wBD.InCurrentEditor then
       Dec(gBookmarksInCurrentEditorCount);
     gBookmarks.Delete(wIndex);
+    wBD.Free;
     DeleteTreeNodeNoEventsStatic(wNode, aOnlyCurrentEditorBookmarks);
     // keep selected item.
     if wIndex<gBookmarksItemIndex then
@@ -1092,11 +1101,12 @@ begin
     wBD := TStackBookmark(gBookmarks.Items[wIndex]);
     if wBD.InCurrentEditor then
       Dec(gBookmarksInCurrentEditorCount);
+    wBD.Free;
     gBookmarks.Delete(wIndex);
     DeleteTreeNodeNoEvents(wNode, True);
     SelectBookmark(wIndex);
   end;
-  ReturnFocusToEditor;
+  //ReturnFocusToEditor;
 end;
 
 procedure TLazViewStackBookmarks.btnEditClick(Sender: TObject);
@@ -1545,8 +1555,13 @@ end;
 type
   //need access to protected function.
   //I'm too lazy to derive a new class
-  TSynEditHack = class(TSynEdit)
+  TSynEditHack = class(TCustomSynEdit)
   end;
+
+{$push}
+{$RANGECHECKS OFF}
+{$R-}
+{$OBJECTCHECKS OFF}
 
 procedure TCaptureIdeEvents.EditorAddChangeHandler;
 var
@@ -1580,6 +1595,7 @@ begin
     Exit;
   try
     wSV := TSynEditHack(gBookmarksCurrentEditor).GetViewedTextBuffer;
+
     //if gBookmarksCurrentEditor.TextViewsManager=nil then
     //  Exit;
     //if gBookmarksCurrentEditor.TextViewsManager.Count<=0 then
@@ -1591,6 +1607,7 @@ begin
 
   end;
 end;
+{$pop}
 
 procedure TCaptureIdeEvents.OnActiveEditorChanged(Sender:TObject);
 begin
@@ -1678,6 +1695,13 @@ begin
   result:=mrOk;
 end;
 
+procedure FreeBookmarks;
+begin
+  ClearBookmarksList;
+  FreeAndNil(gBookmarks);
+  FreeAndNil(gCaptureIdeEventsObject);   // auto destruction.
+end;
+
 // destroy all/ suicide.
 procedure TCaptureIdeEvents.OnIdeClose(Sender: TObject);
 begin
@@ -1687,9 +1711,7 @@ begin
   //LazarusIDE.AddHandlerOnProjectClose(@gCaptureIdeEventsObject.OnProjectClose);
   //LazarusIDE.AddHandlerOnSaveEditorFile(@gCaptureIdeEventsObject.OnFileSaved);
   SourceEditorManagerIntf.UnRegisterChangeEvent(semEditorActivate,@gCaptureIdeEventsObject.OnActiveEditorChanged);
-  ClearBookmarksList;
-  FreeAndNil(gBookmarks);
-  FreeAndNil(gCaptureIdeEventsObject);   // auto destruction.
+  FreeBookmarks;
 end;
 
 procedure TCaptureIdeEvents.DoPush(Sender:TObject);
