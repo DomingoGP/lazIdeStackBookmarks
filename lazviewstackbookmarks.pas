@@ -42,6 +42,7 @@ unit LazViewStackBookmarks;
 // and testing without using the lazarus IDE. Easy to debug.
 
 {$mode objfpc}{$H+}
+{$WARN 5024 off : Parameter "$1" not used}
 interface
 
 uses
@@ -1681,16 +1682,16 @@ end;
 function TCaptureIdeEvents.OnProjectClose(Sender:TObject; AProject:TLazProject):TModalResult;
 begin
   //ShowMessage('project closed');
-  if gCaptureIdeEventsObject=nil then
-    Exit;
   FEnabled:=False;
   if gCaptureIdeEventsObject=nil then
     Exit;
-
   gCaptureIdeEventsObject.EditorRemoveChangeHandler;
   gBookmarksCurrentEditor:=nil;
-
-  SaveStackBookmarks(ChangeFileExt(AProject.ProjectSessionFile,'.bkm'));
+  try
+    SaveStackBookmarks(ChangeFileExt(AProject.ProjectSessionFile,'.bkm'));
+  except
+    //
+  end;
   ClearBookmarksList;
   result:=mrOk;
 end;
