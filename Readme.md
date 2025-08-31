@@ -3,7 +3,7 @@
 
 This add-on adds a menu entry in the view main menu and other in the search main menu.
 
-Go to main menu view StackBookmarks opvtion to view a dockable window.
+Go to main menu view StackBookmarks option to view a dockable window.
 
 You can assign shortcuts in the Tools->Options->Keymappings.
 
@@ -52,6 +52,10 @@ Lock the bookmark. The locked bookmarks are not deleted from the list when you *
 
 Navigate only the bookmarks in the current editor if the shift key is pressed.
    Press **Enter** or **double click** on the list to go to the bookmark.
+   
+When the focus is on the bookmarks list if the **shift key** is pressed the list will keep the focus on Enter or DblClick event, 
+also the keys up and down will go to the bookmark without losing the focus.
+   
 
 Import bookmarks  Add previous saved bookmarks to the list.
 

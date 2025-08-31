@@ -80,6 +80,8 @@ type
     procedure BookmarksTreeDragOver(Sender: TBaseVirtualTree; Source: TObject;
       Shift: TShiftState; State: TDragState; const Pt: TPoint; Mode: TDropMode;
       var Effect: longword; var Accept: boolean);
+    procedure BookmarksTreeFocusChanged(Sender: TBaseVirtualTree;
+      Node: PVirtualNode; Column: TColumnIndex);
     procedure BookmarksTreeGetHint(Sender:TBaseVirtualTree; Node:PVirtualNode;
       Column:TColumnIndex; var LineBreakStyle:TVTTooltipLineBreakStyle;
       var HintText:String);
@@ -90,7 +92,6 @@ type
     procedure BookmarksTreeNewText(Sender: TBaseVirtualTree; Node: PVirtualNode;
       Column: TColumnIndex; const NewText: string);
     procedure BookmarksTreeNodeDblClick(Sender: TBaseVirtualTree; const HitInfo: THitInfo);
-    procedure BookmarksTreeAddToSelection(Sender: TBaseVirtualTree; Node: PVirtualNode);
     //procedure BookmarksTreeBeforeItemErase(Sender: TBaseVirtualTree; TargetCanvas: TCanvas;
     //  Node: PVirtualNode; const ItemRect: TRect; var ItemColor: TColor; var EraseAction: TItemEraseAction);
     procedure BookmarksTreeDrawText(Sender: TBaseVirtualTree; TargetCanvas: TCanvas;
@@ -480,7 +481,7 @@ begin
 end;
 
 {$ifdef TESTING}
-procedure GotoBookmark(aBD: TStackBookmark); overload;
+procedure GotoBookmark(aBD: TStackBookmark;aFocusEditor:boolean=true); overload;
 begin
   if aBD<>nil then
   begin
@@ -490,12 +491,13 @@ begin
       gBookmarksCurrentEditor.CaretXY := aBD.XY;
     end;
   end;
-  ReturnFocusToEditor;
+  if aFocusEditor then
+    ReturnFocusToEditor;
 end;
 
 {$else}
 
-procedure GotoBookmark(aBD: TStackBookmark); overload;
+procedure GotoBookmark(aBD: TStackBookmark;aFocusEditor:boolean=true); overload;
 var
   wSEI:TSourceEditorInterface;
   wFileName:string;
@@ -526,18 +528,19 @@ begin
       end;
     end;
   end;
-  ReturnFocusToEditor;
+  if aFocusEditor then
+    ReturnFocusToEditor;
 end;
 {$endif}
 
-procedure GoToBookmark(aIndex: integer); overload;
+procedure GoToBookmark(aIndex: integer;aFocusEditor:boolean=true); overload;
 var
   wBD: TStackBookmark;
 begin
   wBD := nil;
   if (aIndex >= 0) and (aIndex < gBookmarks.Count) then
     wBD := TStackBookmark(gBookmarks.Items[aIndex]);
-  GoToBookmark(wBD);
+  GoToBookmark(wBD,aFocusEditor);
 end;
 
 procedure GoToCurrentBookmark;inline;
@@ -1223,22 +1226,45 @@ begin
 end;
 }
 
-procedure TLazViewStackBookmarks.BookmarksTreeAddToSelection(Sender: TBaseVirtualTree; Node: PVirtualNode);
+procedure TLazViewStackBookmarks.BookmarksTreeFocusChanged(
+  Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex);
+var
+  ls,rs:word;
 begin
   if (not FIgnoreEvents) and (Node <> nil) then
+  begin
     gBookmarksItemIndex := Node^.Index;
+    if ssShift in GetKeyShiftState then
+    begin
+      // selected by keyboard.
+      ls:=word(GetKeyState(VK_LBUTTON)) and $8000;
+      rs:=word(GetKeyState(VK_RBUTTON)) and $8000;
+      if (ls=0) and (rs=0) then
+      begin
+        GoToBookmark(Node^.Index, False);
+        if (not Self.Focused) and Self.CanFocus then
+          Self.SetFocus;
+      end;
+    end;
+  end;
 end;
 
 procedure TLazViewStackBookmarks.BookmarksTreeKeyAction(Sender: TBaseVirtualTree;
   var CharCode: word; var Shift: TShiftState; var DoDefault: boolean);
 var
   wNode: PVirtualNode;
+  wKeepFocus:boolean;
 begin
   if CharCode = $0D then    //Enter key
   begin
     wNode := BookmarksTree.GetFirstSelected();
     if wNode <> nil then
-      GoToBookmark(wNode^.Index);
+    begin
+      wKeepFocus := ssShift in GetKeyShiftState;
+      GoToBookmark(wNode^.Index,not wKeepFocus);
+      if wKeepFocus and (not Self.Focused) and Self.CanFocus then
+        Self.SetFocus;
+    end;
   end;
 end;
 
@@ -1339,11 +1365,16 @@ end;
 
 procedure TLazViewStackBookmarks.BookmarksTreeNodeDblClick(Sender: TBaseVirtualTree;
   const HitInfo: THitInfo);
+var
+  wKeepFocus:boolean;
 begin
   if HitInfo.HitNode <> nil then
   begin
     gBookmarksItemIndex := HitInfo.HitNode^.Index;
-    GoToBookmark(HitInfo.HitNode^.Index);
+    wKeepFocus := ssShift in GetKeyShiftState;
+    GoToBookmark(HitInfo.HitNode^.Index,not wKeepFocus);
+    if wKeepFocus and (not Self.Focused) and Self.CanFocus then
+      Self.SetFocus;
   end;
 end;
 

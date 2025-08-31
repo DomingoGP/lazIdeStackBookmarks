@@ -6,10 +6,10 @@ object LazViewStackBookmarks: TLazViewStackBookmarks
   Caption = 'StackBookmarks'
   ClientHeight = 321
   ClientWidth = 411
+  LCLVersion = '4.99.0.0'
   OnClose = FormClose
   OnCreate = FormCreate
   OnResize = FormResize
-  LCLVersion = '2.2.2.0'
   object BookmarksTree: TLazVirtualStringTree
     Left = 24
     Height = 292
@@ -36,11 +36,11 @@ object LazViewStackBookmarks: TLazViewStackBookmarks
     TreeOptions.MiscOptions = [toAcceptOLEDrop, toEditable, toFullRepaintOnResize, toInitOnSave, toReportMode, toToggleOnDblClick, toWheelPanning, toFullRowDrag]
     TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowHorzGridLines, toThemeAware, toUseBlendedImages]
     TreeOptions.SelectionOptions = [toFullRowSelect, toAlwaysSelectNode]
-    OnAddToSelection = BookmarksTreeAddToSelection
     OnDragAllowed = BookmarksTreeDragAllowed
     OnDragOver = BookmarksTreeDragOver
     OnDragDrop = BookmarksTreeDragDrop
     OnDrawText = BookmarksTreeDrawText
+    OnFocusChanged = BookmarksTreeFocusChanged
     OnGetText = BookmarksTreeGetText
     OnGetHint = BookmarksTreeGetHint
     OnKeyAction = BookmarksTreeKeyAction
