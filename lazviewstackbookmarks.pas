@@ -72,6 +72,7 @@ type
     tbbPrevious:TToolButton;
     tbbRefresh:TToolButton;
     ToolBar:TToolBar;
+    tbbSort: TToolButton;
     procedure BookmarksTreeDragAllowed(Sender: TBaseVirtualTree; Node: PVirtualNode;
       Column: TColumnIndex; var Allowed: boolean);
     procedure BookmarksTreeDragDrop(Sender: TBaseVirtualTree; Source: TObject;
@@ -115,6 +116,7 @@ type
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
     procedure FormResize(Sender:TObject);
+    procedure tbbSortClick(Sender: TObject);
   private
     FIgnoreEvents: boolean;
     procedure DeleteTreeNodeNoEvents(Node: PVirtualNode; Reindex: boolean = True);
@@ -157,9 +159,10 @@ resourcestring
   rsBtnLockHint    = 'Lock/Unlock the bookmark. Locked bookmarks aren''t deleted by Pop';
   rsBtnEditHint    = 'Edit the bookmark description';
   rsBtnClearHint   = 'Deletes all bookmaks. If Shift only in current editor';
-  rsBtnRefreshHint = 'Refreshes the bookmarks description (only on bookmarks in current editor';
+  rsBtnRefreshHint = 'Refreshes the bookmarks description (only on bookmarks in current editor)';
   rsBtnImportHint  = 'Import bookmarks from file';
   rsBtnExportHint  = 'Save bookmarks to file';
+  rsBtnSortHint    = 'Sort bookmarks by file, line';
   rsImpExpFilter   = 'Files *.bkm|*.bkm|All files *.*|*.*';
   rsImportTitle    = 'Import bookmarks';
   rsExportTitle    = 'Export bookmarks';
@@ -708,7 +711,7 @@ begin
 end;
 
 const
-  TB_SIZE=240;
+  TB_SIZE=258;
   TB_LEFT=140;
   TB_TOP=25;
   TB_HEIGHT=21;
@@ -1041,6 +1044,48 @@ begin
   end;
 end;
 
+function SortBookmarksByUnitNameLine(Item1, Item2: Pointer): integer;
+var
+  Comp1: TStackBookmark absolute Item1;
+  Comp2: TStackBookmark absolute Item2;
+begin
+  Result:=CompareText(Comp1.UnitnameSB,Comp2.UnitnameSB);
+  if Result = 0 then
+    Result := Comp1.XY.Y - Comp2.XY.Y;
+end;
+
+procedure TLazViewStackBookmarks.tbbSortClick(Sender: TObject);
+var
+  wI: integer;
+  wNode, wSelected: PVirtualNode;
+  wBD,wBMSelected: TStackBookmark;
+begin
+  wSelected := BookmarksTree.GetFirstSelected();
+  wBMSelected:=nil;
+  if wSelected<>nil then
+    wBMSelected := TStackBookmark(BookmarksTree.GetNodeData(wSelected)^);
+  if gBookmarks=nil then
+    Exit;
+  if gBookmarks.Count<=0 then
+    Exit;
+  gBookmarks.Sort(@SortBookmarksByUnitNameLine);
+
+  BookmarksTree.BeginUpdate;
+  BookmarksTree.Clear;
+  wI:=0;
+  while wI < gBookmarks.Count do
+  begin
+    wBD := TStackBookmark(gBookmarks.Items[wI]);
+    wNode := BookmarksTree.AddChild(nil, wBD);
+    wBD.TreeNode := wNode;
+    if wBD = wBMSelected then
+      wSelected := wNode;
+    Inc(wI);
+  end;
+  BookmarksTree.EndUpdate;
+  SelectTreeNodeNoEvents(wSelected);
+end;
+
 procedure TLazViewStackBookmarks.btnPreviousClick(Sender: TObject);
 begin
   PreviousStackBookmark(SHIFTKEY_CODE in GetKeyShiftState);
@@ -1173,6 +1218,8 @@ begin
   tbbExport.ShowHint := True;
   tbbImport.Hint := rsBtnImportHint;
   tbbImport.ShowHint := True;
+  tbbSort.Hint := rsBtnSortHint;
+  tbbSort.ShowHint := True;
 
   FillTreeView;
   SetActiveEditor;

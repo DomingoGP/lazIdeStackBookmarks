@@ -83,7 +83,7 @@ object LazViewStackBookmarks: TLazViewStackBookmarks
     Left = 140
     Height = 21
     Top = 1
-    Width = 232
+    Width = 258
     Align = alNone
     ButtonHeight = 21
     ButtonWidth = 21
@@ -159,6 +159,12 @@ object LazViewStackBookmarks: TLazViewStackBookmarks
       Top = 0
       Caption = 'E'
       OnClick = btnExportClick
+    end
+    object tbbSort: TToolButton
+      Left = 232
+      Top = 0
+      Caption = 'S'
+      OnClick = tbbSortClick
     end
   end
   object Images: TImageList
