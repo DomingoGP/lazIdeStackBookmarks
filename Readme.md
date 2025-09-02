@@ -50,12 +50,16 @@ Edit the bookmark description. **F2**.
 Lock the bookmark. The locked bookmarks are not deleted from the list when you **POP** a bookmark.
   (You can move the most Used bookmarks at the begin of the list and Lock the last most used, then the bookmarks will remain in the list)
 
-Navigate only the bookmarks in the current editor if the shift key is pressed.
-   Press **Enter** or **double click** on the list to go to the bookmark.
+Navigate only the bookmarks in the current editor if the shift key is pressed. Press **Enter** or **double click** on the list to go to the bookmark.
    
-When the focus is on the bookmarks list if the **shift key** is pressed the list will keep the focus on Enter or DblClick event, 
+When the bookmarks list is focused  if the **shift key** is pressed the list will keep the focus on Enter or DblClick event, 
 also the keys up and down will go to the bookmark without losing the focus.
-   
+
+When activate the window with the mouse and the **shift key** pressed one
+bookmark is **Pushed** automaticaly.
+
+When the bookmarks list is focused the **backspace** key **Pop** the last bookmark or if the **shift key** is pressed the last bookmark in the current editor.
+
 
 Import bookmarks  Add previous saved bookmarks to the list.
 

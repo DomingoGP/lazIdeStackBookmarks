@@ -113,17 +113,20 @@ type
     procedure btnPushClick(Sender: TObject);
     procedure btnRefreshClick(Sender: TObject);
     procedure btnSwapClick(Sender: TObject);
+    procedure FormActivate(Sender: TObject);
     procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
     procedure FormResize(Sender:TObject);
     procedure tbbSortClick(Sender: TObject);
   private
     FIgnoreEvents: boolean;
+    FRecoveringFocus: boolean;
     procedure DeleteTreeNodeNoEvents(Node: PVirtualNode; Reindex: boolean = True);
     procedure FillTreeView;
     procedure SelectTreeNodeNoEvents(aNode: PVirtualNode);
     procedure SetToolBarHorizontal;
     procedure SetToolBarVertical;
+    procedure RecoverFocus;
   end;
 
 procedure Register;
@@ -734,6 +737,19 @@ begin
   ToolBar.Top:=TB_TOP;
 end;
 
+procedure TLazViewStackBookmarks.RecoverFocus;
+begin
+  if (not Self.Focused) and Self.CanFocus then
+  begin
+    FRecoveringFocus := True;
+    try
+      Self.SetFocus;
+    finally
+      FRecoveringFocus := False;
+    end;
+  end;
+end;
+
 //Search starts from node  aNode,aIndex
 function GetNextStackBookmark(var aIndex: integer; var aNode: PVirtualNode;
   aOnlyCurrentEditorBookmarks: boolean = False): boolean;
@@ -830,7 +846,10 @@ begin
   gBookmarks.Add(wBD);
   Inc(gBookmarksInCurrentEditorCount);
   if frmViewStackBM <> nil then
+  begin
     wBD.TreeNode:=frmViewStackBM.BookmarksTree.AddChild(nil, wBD);
+    frmViewStackBM.BookmarksTree.FocusedNode := wBD.TreeNode;
+  end;
   SelectBookmark(gBookmarks.Count-1);
 end;
 
@@ -855,6 +874,7 @@ begin
   begin
     wNode := frmViewStackBM.BookmarksTree.GetFirstSelected();
     wBD.TreeNode := frmViewStackBM.BookmarksTree.InsertNode(wNode, amInsertBefore, wBD);
+    frmViewStackBM.BookmarksTree.FocusedNode := wBD.TreeNode;
   end;
   SelectBookmark(wIndex);
 end;
@@ -1110,6 +1130,26 @@ begin
   ReturnFocusToEditor;
 end;
 
+procedure TLazViewStackBookmarks.FormActivate(Sender: TObject);
+var
+  wP:TPoint;
+begin
+  if FRecoveringFocus then
+    Exit;
+  if GetCursorPos(wP) then   // only if press button inside the tree.
+  begin
+    wP := ScreenToClient(wP);
+    if (wP.X < BookmarksTree.Left) or (wP.Y < BookmarksTree.Top) or
+       (wP.X > (BookmarksTree.Left + BookmarksTree.Width)) or
+       (wP.Y > (BookmarksTree.Top + BookmarksTree.Height)) then
+      Exit;
+  end;
+  if ssShift in GetKeyShiftState then
+  begin
+    PushStackBookmark;
+  end;
+end;
+
 procedure TLazViewStackBookmarks.btnClearClick(Sender: TObject);
 begin
   if SHIFTKEY_CODE in GetKeyShiftState then
@@ -1221,6 +1261,8 @@ begin
   tbbSort.Hint := rsBtnSortHint;
   tbbSort.ShowHint := True;
 
+  FRecoveringFocus := False;
+
   FillTreeView;
   SetActiveEditor;
 end;
@@ -1289,8 +1331,7 @@ begin
       if (ls=0) and (rs=0) then
       begin
         GoToBookmark(Node^.Index, False);
-        if (not Self.Focused) and Self.CanFocus then
-          Self.SetFocus;
+        RecoverFocus;
       end;
     end;
   end;
@@ -1302,16 +1343,20 @@ var
   wNode: PVirtualNode;
   wKeepFocus:boolean;
 begin
-  if CharCode = $0D then    //Enter key
+  if CharCode = VK_RETURN then
   begin
     wNode := BookmarksTree.GetFirstSelected();
     if wNode <> nil then
     begin
       wKeepFocus := ssShift in GetKeyShiftState;
       GoToBookmark(wNode^.Index,not wKeepFocus);
-      if wKeepFocus and (not Self.Focused) and Self.CanFocus then
-        Self.SetFocus;
+      if wKeepFocus then
+        RecoverFocus;
     end;
+  end
+  else if CharCode = VK_BACK then
+  begin
+    PopStackBookmark(ssShift in GetKeyShiftState);
   end;
 end;
 
@@ -1420,8 +1465,8 @@ begin
     gBookmarksItemIndex := HitInfo.HitNode^.Index;
     wKeepFocus := ssShift in GetKeyShiftState;
     GoToBookmark(HitInfo.HitNode^.Index,not wKeepFocus);
-    if wKeepFocus and (not Self.Focused) and Self.CanFocus then
-      Self.SetFocus;
+    if wKeepFocus then
+      RecoverFocus;
   end;
 end;
 
